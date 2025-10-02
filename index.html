@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Meeting Minutes Generator</title>
+  
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+
+  <!-- DOCX + FileSaver -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/docx/8.3.2/docx.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+  
+  <!-- html2pdf.js -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.9.3/html2pdf.bundle.min.js"></script>
+  
+  <style>
+    :root {
+      --bg-color: linear-gradient(135deg, #e3f2fd, #f1f8e9);
+      --card-bg: rgba(255, 255, 255, 0.95);
+      --text-color: #333;
+      --heading-color: #0d47a1;
+      --subtext-color: #555;
+    }
+
+    body.dark {
+      --bg-color: linear-gradient(135deg, #1c1c1c, #2c2c2c);
+      --card-bg: rgba(34, 34, 34, 0.95);
+      --text-color: #eee;
+      --heading-color: #90caf9;
+      --subtext-color: #aaa;
+    }
+
+    body {
+      font-family: "Poppins", sans-serif;
+      background: var(--bg-color);
+      margin: 0;
+      padding: 20px;
+      color: var(--text-color);
+      transition: all 0.3s ease;
+    }
+    h1 {
+      font-size: 28px;
+      margin-bottom: 4px;
+      color: var(--heading-color);
+      font-weight: 700;
+    }
+    p.subtitle {
+      color: var(--subtext-color);
+      margin-top: 0;
+      font-size: 15px;
+    }
+    .actions {
+      margin: 15px 0 20px 0;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    button {
+      padding: 10px 18px;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+      transition: all 0.25s ease;
+    }
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    }
+    .btn-primary { background: linear-gradient(45deg,#2196f3,#1976d2); color: #fff; }
+    .btn-secondary { background: linear-gradient(45deg,#9e9e9e,#616161); color: #fff; }
+    .btn-success { background: linear-gradient(45deg,#4caf50,#2e7d32); color: #fff; }
+    .btn-danger { background: linear-gradient(45deg,#e53935,#b71c1c); color: #fff; }
+    .btn-toggle { background: linear-gradient(45deg,#ffb300,#f57c00); color: #fff; }
+
+    .container {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+    }
+    .card {
+      background: var(--card-bg);
+      backdrop-filter: blur(10px);
+      border-radius: 16px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+      padding: 22px;
+      transition: transform 0.3s ease, box-shadow 0.3s ease, background 0.3s ease;
+    }
+    .card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+    }
+    label {
+      font-weight: 600;
+      display: block;
+      margin-bottom: 6px;
+      font-size: 14px;
+      color: var(--text-color);
+    }
+    input, textarea {
+      width: 100%;
+      padding: 12px;
+      margin-bottom: 16px;
+      border: 1px solid #ccc;
+      border-radius: 10px;
+      font-size: 14px;
+      background: #fafafa;
+      transition: border 0.2s, background 0.2s;
+    }
+    body.dark input, body.dark textarea {
+      background: #444;
+      color: #eee;
+      border: 1px solid #666;
+    }
+    input:focus, textarea:focus {
+      outline: none;
+      border-color: #2196f3;
+      background: #fff;
+      box-shadow: 0 0 0 3px rgba(33,150,243,0.2);
+    }
+    body.dark input:focus, body.dark textarea:focus {
+      background: #555;
+    }
+    ul { 
+      padding-left: 20px;
+      margin: 5px 0 15px 0;
+    }
+    .output-section h2 {
+      margin-top: 0;
+      color: #1565c0;
+      border-bottom: 2px solid #2196f3;
+      padding-bottom: 6px;
+    }
+    #minutesPrintable {
+      padding: 20px;
+      background: #fff;
+      border-radius: 12px;
+      color: #000;
+    }
+    body.dark #minutesPrintable {
+      background: #222;
+      color: #eee;
+    }
+    #minutesPrintable h3 {
+      color: #2e7d32;
+    }
+    @media (max-width: 900px) {
+      .container {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <h1>📋 Meeting Minutes Generator</h1>
+  <p class="subtitle">Buat notulen rapih, simpan sebagai PDF / DOCX, dan bagikan ke tim.</p>
+
+  <div class="actions">
+    <button id="exportPdf" class="btn-primary">⬇ Export PDF</button>
+    <button id="downloadDoc" class="btn-secondary">⬇ Download .docx</button>
+    <button id="toggleMode" class="btn-toggle">🌙 Dark Mode</button>
+  </div>
+
+  <div class="container">
+    <!-- Input -->
+    <div class="card">
+      <label>Meeting Title</label>
+      <input type="text" id="meetingTitle" placeholder="Masukkan judul meeting" value="Weekly Meeting"/>
+
+      <label>Date</label>
+      <input type="date" id="meetingDate"/>
+
+      <label>Time</label>
+      <input type="time" id="meetingTime"/>
+
+      <label>Location / Mode</label>
+      <input type="text" id="meetingLocation" placeholder="Contoh: Zoom, Meeting Room" value="Zoom"/>
+
+      <label>Organizer</label>
+      <input type="text" id="meetingOrganizer" placeholder="Nama pengatur meeting"/>
+
+      <label>Participants</label>
+      <input type="text" id="participantInput" placeholder="Tambah peserta, tekan Enter"/>
+      <ul id="participantList"></ul>
+
+      <label>Agenda</label>
+      <input type="text" id="agendaInput" placeholder="Tambah agenda, tekan Enter"/>
+      <ul id="agendaList"></ul>
+
+      <label>Notes / Highlights (optional)</label>
+      <textarea id="meetingNotes" rows="5" placeholder="Catatan atau highlight meeting..."></textarea>
+
+      <div>
+        <button id="generateBtn" class="btn-success">Generate Minutes</button>
+        <button id="resetBtn" class="btn-danger">Reset</button>
+      </div>
+    </div>
+
+    <!-- Output -->
+    <div class="card output-section">
+      <div id="minutesPrintable">
+        <h2 id="printTitle">Meeting Minutes</h2>
+        <p><strong>Date:</strong> <span id="printDate">-</span> | 
+           <strong>Time:</strong> <span id="printTime">-</span></p>
+        <p><strong>Location:</strong> <span id="printLocation">-</span> | 
+           <strong>Organizer:</strong> <span id="printOrganizer">-</span></p>
+
+        <h3>Participants</h3>
+        <ul id="printParticipants"></ul>
+
+        <h3>Agenda</h3>
+        <ul id="printAgenda"></ul>
+
+        <h3>Highlights</h3>
+        <div id="printNotes">-</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const participantInput = document.getElementById("participantInput");
+    const participantList = document.getElementById("participantList");
+    const agendaInput = document.getElementById("agendaInput");
+    const agendaList = document.getElementById("agendaList");
+
+    participantInput.addEventListener("keypress", e => {
+      if (e.key === "Enter" && participantInput.value.trim() !== "") {
+        const li = document.createElement("li");
+        li.textContent = participantInput.value;
+        participantList.appendChild(li);
+        participantInput.value = "";
+      }
+    });
+
+    agendaInput.addEventListener("keypress", e => {
+      if (e.key === "Enter" && agendaInput.value.trim() !== "") {
+        const li = document.createElement("li");
+        li.textContent = agendaInput.value;
+        agendaList.appendChild(li);
+        agendaInput.value = "";
+      }
+    });
+
+    document.getElementById("generateBtn").addEventListener("click", () => {
+      document.getElementById("printTitle").textContent = document.getElementById("meetingTitle").value;
+      document.getElementById("printDate").textContent = document.getElementById("meetingDate").value || "-";
+      document.getElementById("printTime").textContent = document.getElementById("meetingTime").value || "-";
+      document.getElementById("printLocation").textContent = document.getElementById("meetingLocation").value || "-";
+      document.getElementById("printOrganizer").textContent = document.getElementById("meetingOrganizer").value || "-";
+
+      const pList = document.getElementById("printParticipants");
+      pList.innerHTML = "";
+      participantList.querySelectorAll("li").forEach(li => {
+        const item = document.createElement("li");
+        item.textContent = li.textContent;
+        pList.appendChild(item);
+      });
+
+      const aList = document.getElementById("printAgenda");
+      aList.innerHTML = "";
+      agendaList.querySelectorAll("li").forEach(li => {
+        const item = document.createElement("li");
+        item.textContent = li.textContent;
+        aList.appendChild(item);
+      });
+
+      const notesRaw = document.getElementById("meetingNotes").value.trim();
+      const notesContainer = document.getElementById("printNotes");
+      if (notesRaw) {
+        const notesArr = notesRaw.split("\n").filter(line => line.trim() !== "");
+        const ul = document.createElement("ul");
+        notesArr.forEach(n => {
+          const li = document.createElement("li");
+          li.textContent = n;
+          ul.appendChild(li);
+        });
+        notesContainer.innerHTML = "";
+        notesContainer.appendChild(ul);
+      } else {
+        notesContainer.textContent = "-";
+      }
+    });
+
+    document.getElementById("resetBtn").addEventListener("click", () => {
+      document.querySelectorAll("input, textarea").forEach(el => el.value = "");
+      participantList.innerHTML = "";
+      agendaList.innerHTML = "";
+      document.getElementById("printTitle").textContent = "Meeting Minutes";
+      document.getElementById("printDate").textContent = "-";
+      document.getElementById("printTime").textContent = "-";
+      document.getElementById("printLocation").textContent = "-";
+      document.getElementById("printOrganizer").textContent = "-";
+      document.getElementById("printParticipants").innerHTML = "";
+      document.getElementById("printAgenda").innerHTML = "";
+      document.getElementById("printNotes").textContent = "-";
+    });
+
+    document.getElementById("downloadDoc").addEventListener("click", () => {
+      const { Document, Packer, Paragraph, HeadingLevel } = window.docx;
+
+      const title = document.getElementById("meetingTitle").value || "Meeting Minutes";
+      const date = document.getElementById("meetingDate").value || "-";
+      const time = document.getElementById("meetingTime").value || "-";
+      const location = document.getElementById("meetingLocation").value || "-";
+      const organizer = document.getElementById("meetingOrganizer").value || "-";
+      const notes = document.getElementById("meetingNotes").value || "-";
+
+      let participants = [];
+      document.querySelectorAll("#participantList li").forEach(li => participants.push(li.textContent));
+      if (participants.length === 0) participants.push("-");
+
+      let agendas = [];
+      document.querySelectorAll("#agendaList li").forEach(li => agendas.push(li.textContent));
+      if (agendas.length === 0) agendas.push("-");
+
+      const doc = new Document({
+        sections: [{
+          children: [
+            new Paragraph({ text: title, heading: HeadingLevel.TITLE }),
+            new Paragraph({ text: `Date: ${date} | Time: ${time}` }),
+            new Paragraph({ text: `Location: ${location} | Organizer: ${organizer}` }),
+            new Paragraph(""),
+
+            new Paragraph({ text: "Participants", heading: HeadingLevel.HEADING_2 }),
+            ...participants.map(p => new Paragraph(p)),
+
+            new Paragraph({ text: "Agenda", heading: HeadingLevel.HEADING_2 }),
+            ...agendas.map(a => new Paragraph(a)),
+
+            new Paragraph({ text: "Highlights / Notes", heading: HeadingLevel.HEADING_2 }),
+            ...notes.split("\n").map(n => new Paragraph(n)),
+          ]
+        }]
+      });
+
+      Packer.toBlob(doc).then((blob) => {
+        saveAs(blob, title + ".docx");
+      });
+    });
+
+    // ✅ Export PDF dengan html2pdf.js
+    document.getElementById("exportPdf").addEventListener("click", () => {
+      const element = document.getElementById("minutesPrintable");
+      const opt = {
+        margin:       0.5,
+        filename:     'meeting-minutes.pdf',
+        image:        { type: 'jpeg', quality: 0.98 },
+        html2canvas:  { scale: 2 },
+        jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' }
+      };
+      html2pdf().set(opt).from(element).save();
+    });
+
+    // 🌙 Toggle Dark Mode
+    const toggleBtn = document.getElementById("toggleMode");
+    toggleBtn.addEventListener("click", () => {
+      document.body.classList.toggle("dark");
+      if (document.body.classList.contains("dark")) {
+        toggleBtn.textContent = "☀ Light Mode";
+      } else {
+        toggleBtn.textContent = "🌙 Dark Mode";
+      }
+    });
+  </script>
+</body>
+</html>
