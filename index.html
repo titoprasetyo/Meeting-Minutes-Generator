@@ -23,7 +23,6 @@
       --heading-color: #0d47a1;
       --subtext-color: #555;
     }
-
     body.dark {
       --bg-color: linear-gradient(135deg, #1c1c1c, #2c2c2c);
       --card-bg: rgba(34, 34, 34, 0.95);
@@ -31,7 +30,6 @@
       --heading-color: #90caf9;
       --subtext-color: #aaa;
     }
-
     body {
       font-family: "Poppins", sans-serif;
       background: var(--bg-color);
@@ -148,6 +146,15 @@
     #minutesPrintable h3 {
       color: #2e7d32;
     }
+    [contenteditable="true"] {
+      border: 1px dashed transparent;
+      padding: 2px;
+    }
+    [contenteditable="true"]:focus {
+      outline: none;
+      border: 1px dashed #2196f3;
+      background: #f9f9f9;
+    }
     @media (max-width: 900px) {
       .container {
         grid-template-columns: 1fr;
@@ -192,8 +199,17 @@
       <input type="text" id="agendaInput" placeholder="Tambah agenda, tekan Enter"/>
       <ul id="agendaList"></ul>
 
-      <label>Notes / Highlights (optional)</label>
-      <textarea id="meetingNotes" rows="5" placeholder="Catatan atau highlight meeting..."></textarea>
+      <!-- Sub Bab Diskusi -->
+      <label>Sub Bab Diskusi</label>
+<input type="text" id="subbabTitle" placeholder="Judul sub bab, contoh: Rencana Tapping"/>
+<textarea id="subbabContent" rows="3" placeholder="Isi / penjelasan sub bab..."></textarea>
+<button type="button" id="voiceSubbabBtn" class="btn-secondary">🎤 Voice to Text</button>
+<button type="button" id="addSubbabBtn" class="btn-success">Tambah Sub Bab</button>
+<ul id="subbabList"></ul>
+
+
+      <label>Notes / Highlights (opsional)</label>
+      <textarea id="meetingNotes" rows="5" placeholder="Catatan singkat..."></textarea>
 
       <div>
         <button id="generateBtn" class="btn-success">Generate Minutes</button>
@@ -204,20 +220,23 @@
     <!-- Output -->
     <div class="card output-section">
       <div id="minutesPrintable">
-        <h2 id="printTitle">Meeting Minutes</h2>
-        <p><strong>Date:</strong> <span id="printDate">-</span> | 
-           <strong>Time:</strong> <span id="printTime">-</span></p>
-        <p><strong>Location:</strong> <span id="printLocation">-</span> | 
-           <strong>Organizer:</strong> <span id="printOrganizer">-</span></p>
+        <h2 id="printTitle" contenteditable="true">Meeting Minutes</h2>
+        <p><strong>Date:</strong> <span id="printDate" contenteditable="true">-</span> | 
+           <strong>Time:</strong> <span id="printTime" contenteditable="true">-</span></p>
+        <p><strong>Location:</strong> <span id="printLocation" contenteditable="true">-</span> | 
+           <strong>Organizer:</strong> <span id="printOrganizer" contenteditable="true">-</span></p>
 
         <h3>Participants</h3>
-        <ul id="printParticipants"></ul>
+        <ul id="printParticipants" contenteditable="true"></ul>
 
         <h3>Agenda</h3>
-        <ul id="printAgenda"></ul>
+        <ul id="printAgenda" contenteditable="true"></ul>
+
+        <h3>Discussion</h3>
+        <div id="printSubbab" contenteditable="true"></div>
 
         <h3>Highlights</h3>
-        <div id="printNotes">-</div>
+        <div id="printNotes" contenteditable="true">-</div>
       </div>
     </div>
   </div>
@@ -227,7 +246,9 @@
     const participantList = document.getElementById("participantList");
     const agendaInput = document.getElementById("agendaInput");
     const agendaList = document.getElementById("agendaList");
+    const subbabList = document.getElementById("subbabList");
 
+    // Tambah peserta
     participantInput.addEventListener("keypress", e => {
       if (e.key === "Enter" && participantInput.value.trim() !== "") {
         const li = document.createElement("li");
@@ -236,7 +257,7 @@
         participantInput.value = "";
       }
     });
-
+    // Tambah agenda
     agendaInput.addEventListener("keypress", e => {
       if (e.key === "Enter" && agendaInput.value.trim() !== "") {
         const li = document.createElement("li");
@@ -245,7 +266,20 @@
         agendaInput.value = "";
       }
     });
+    // Tambah subbab
+    document.getElementById("addSubbabBtn").addEventListener("click", () => {
+      const title = document.getElementById("subbabTitle").value.trim();
+      const content = document.getElementById("subbabContent").value.trim();
+      if (title && content) {
+        const li = document.createElement("li");
+        li.innerHTML = `<strong>${title}</strong><br><span>${content}</span>`;
+        subbabList.appendChild(li);
+        document.getElementById("subbabTitle").value = "";
+        document.getElementById("subbabContent").value = "";
+      }
+    });
 
+    // Generate
     document.getElementById("generateBtn").addEventListener("click", () => {
       document.getElementById("printTitle").textContent = document.getElementById("meetingTitle").value;
       document.getElementById("printDate").textContent = document.getElementById("meetingDate").value || "-";
@@ -253,6 +287,7 @@
       document.getElementById("printLocation").textContent = document.getElementById("meetingLocation").value || "-";
       document.getElementById("printOrganizer").textContent = document.getElementById("meetingOrganizer").value || "-";
 
+      // peserta
       const pList = document.getElementById("printParticipants");
       pList.innerHTML = "";
       participantList.querySelectorAll("li").forEach(li => {
@@ -260,7 +295,7 @@
         item.textContent = li.textContent;
         pList.appendChild(item);
       });
-
+      // agenda
       const aList = document.getElementById("printAgenda");
       aList.innerHTML = "";
       agendaList.querySelectorAll("li").forEach(li => {
@@ -268,7 +303,16 @@
         item.textContent = li.textContent;
         aList.appendChild(item);
       });
-
+      // subbab
+      const sContainer = document.getElementById("printSubbab");
+      sContainer.innerHTML = "";
+      subbabList.querySelectorAll("li").forEach(li => {
+        const block = document.createElement("div");
+        block.innerHTML = `<p><strong>${li.querySelector("strong").innerText}</strong></p>
+                           <p>${li.querySelector("span").innerText}</p>`;
+        sContainer.appendChild(block);
+      });
+      // notes
       const notesRaw = document.getElementById("meetingNotes").value.trim();
       const notesContainer = document.getElementById("printNotes");
       if (notesRaw) {
@@ -286,10 +330,12 @@
       }
     });
 
+    // Reset
     document.getElementById("resetBtn").addEventListener("click", () => {
       document.querySelectorAll("input, textarea").forEach(el => el.value = "");
       participantList.innerHTML = "";
       agendaList.innerHTML = "";
+      subbabList.innerHTML = "";
       document.getElementById("printTitle").textContent = "Meeting Minutes";
       document.getElementById("printDate").textContent = "-";
       document.getElementById("printTime").textContent = "-";
@@ -297,26 +343,34 @@
       document.getElementById("printOrganizer").textContent = "-";
       document.getElementById("printParticipants").innerHTML = "";
       document.getElementById("printAgenda").innerHTML = "";
+      document.getElementById("printSubbab").innerHTML = "";
       document.getElementById("printNotes").textContent = "-";
     });
 
+    // Export DOCX
     document.getElementById("downloadDoc").addEventListener("click", () => {
       const { Document, Packer, Paragraph, HeadingLevel } = window.docx;
-
-      const title = document.getElementById("meetingTitle").value || "Meeting Minutes";
-      const date = document.getElementById("meetingDate").value || "-";
-      const time = document.getElementById("meetingTime").value || "-";
-      const location = document.getElementById("meetingLocation").value || "-";
-      const organizer = document.getElementById("meetingOrganizer").value || "-";
-      const notes = document.getElementById("meetingNotes").value || "-";
+      const title = document.getElementById("printTitle").innerText || "Meeting Minutes";
+      const date = document.getElementById("printDate").innerText || "-";
+      const time = document.getElementById("printTime").innerText || "-";
+      const location = document.getElementById("printLocation").innerText || "-";
+      const organizer = document.getElementById("printOrganizer").innerText || "-";
+      const notes = document.getElementById("printNotes").innerText || "-";
 
       let participants = [];
-      document.querySelectorAll("#participantList li").forEach(li => participants.push(li.textContent));
+      document.querySelectorAll("#printParticipants li").forEach(li => participants.push(li.textContent));
       if (participants.length === 0) participants.push("-");
 
       let agendas = [];
-      document.querySelectorAll("#agendaList li").forEach(li => agendas.push(li.textContent));
+      document.querySelectorAll("#printAgenda li").forEach(li => agendas.push(li.textContent));
       if (agendas.length === 0) agendas.push("-");
+
+      let subbabs = [];
+      document.querySelectorAll("#printSubbab div").forEach(div => {
+        const t = div.querySelector("strong")?.innerText || "";
+        const c = div.querySelector("p:nth-child(2)")?.innerText || "";
+        subbabs.push({title: t, content: c});
+      });
 
       const doc = new Document({
         sections: [{
@@ -325,25 +379,21 @@
             new Paragraph({ text: `Date: ${date} | Time: ${time}` }),
             new Paragraph({ text: `Location: ${location} | Organizer: ${organizer}` }),
             new Paragraph(""),
-
             new Paragraph({ text: "Participants", heading: HeadingLevel.HEADING_2 }),
             ...participants.map(p => new Paragraph(p)),
-
             new Paragraph({ text: "Agenda", heading: HeadingLevel.HEADING_2 }),
             ...agendas.map(a => new Paragraph(a)),
-
+            new Paragraph({ text: "Discussion", heading: HeadingLevel.HEADING_2 }),
+            ...subbabs.map(sb => [ new Paragraph({ text: sb.title, heading: HeadingLevel.HEADING_3 }), new Paragraph(sb.content) ]).flat(),
             new Paragraph({ text: "Highlights / Notes", heading: HeadingLevel.HEADING_2 }),
             ...notes.split("\n").map(n => new Paragraph(n)),
           ]
         }]
       });
-
-      Packer.toBlob(doc).then((blob) => {
-        saveAs(blob, title + ".docx");
-      });
+      Packer.toBlob(doc).then((blob) => { saveAs(blob, title + ".docx"); });
     });
 
-    // ✅ Export PDF dengan html2pdf.js
+    // Export PDF
     document.getElementById("exportPdf").addEventListener("click", () => {
       const element = document.getElementById("minutesPrintable");
       const opt = {
@@ -356,16 +406,39 @@
       html2pdf().set(opt).from(element).save();
     });
 
-    // 🌙 Toggle Dark Mode
+    // Toggle Dark Mode
     const toggleBtn = document.getElementById("toggleMode");
     toggleBtn.addEventListener("click", () => {
       document.body.classList.toggle("dark");
-      if (document.body.classList.contains("dark")) {
-        toggleBtn.textContent = "☀ Light Mode";
-      } else {
-        toggleBtn.textContent = "🌙 Dark Mode";
-      }
+      toggleBtn.textContent = document.body.classList.contains("dark") ? "☀ Light Mode" : "🌙 Dark Mode";
     });
+    // === VOICE TO TEXT untuk Sub Bab ===
+document.getElementById("voiceSubbabBtn").addEventListener("click", () => {
+  if (!('webkitSpeechRecognition' in window)) {
+    alert("Browser tidak mendukung Speech Recognition. Gunakan Google Chrome.");
+    return;
+  }
+
+  const recognition = new webkitSpeechRecognition();
+  recognition.continuous = false;
+  recognition.interimResults = false;
+  recognition.lang = "id-ID"; // ganti ke "en-US" kalau meeting pakai bahasa Inggris
+
+  recognition.start();
+
+  recognition.onresult = function(event) {
+    const transcript = event.results[0][0].transcript;
+    const textarea = document.getElementById("subbabContent");
+    textarea.value += (textarea.value ? " " : "") + transcript;
+    recognition.stop();
+  };
+
+  recognition.onerror = function() {
+    recognition.stop();
+    alert("Terjadi error saat merekam suara.");
+  };
+});
+
   </script>
 </body>
 </html>
